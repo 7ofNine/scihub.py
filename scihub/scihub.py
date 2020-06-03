@@ -28,7 +28,7 @@ urllib3.disable_warnings()
 
 # constants
 SCHOLARS_BASE_URL = 'https://scholar.google.com/scholar'
-HEADERS = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:27.0) Gecko/20100101 Firefox/27.0'}
+HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT6.1; Win64; x64; rv:22.0) Gecko/20130328 Firefox/15.0a2'}
 
 class SciHub(object):
     """
@@ -44,14 +44,18 @@ class SciHub(object):
 
     def _get_available_scihub_urls(self):
         '''
-        Finds available scihub urls via https://whereisscihub.now.sh/
+        Finds available scihub urls via https://whereisscihub.now.sh/ doesn't work. Use https://sci-hub.now.sh/ instead
         '''
         urls = []
-        res = requests.get('https://whereisscihub.now.sh/')
-        s = self._get_soup(res.content)
-        for a in s.find_all('a', href=True):
-            if 'sci-hub.' in a['href']:
-                urls.append(a['href'])
+        res = requests.get('https://sci-hub.now.sh/')
+        if res.status_code == 200 :
+            s = self._get_soup(res.content)
+            for a in s.find_all('a', href=True):
+                if 'sci-hub.' in a['href']:
+                    urls.append(a['href'])
+        else :
+            logger.debug('sci-hub.now.sh did not respond properly. Using default : ')   
+                      
         return urls
 
     def set_proxy(self, proxy):
@@ -299,12 +303,17 @@ def main():
         with open(args.file, 'r') as f:
             identifiers = f.read().splitlines()
             for identifier in identifiers:
-                result = sh.download(identifier, args.output)
-                if 'err' in result:
-                    logger.debug('%s', result['err'])
-                else:
-                    logger.debug('Successfully downloaded file with identifier %s', identifier)
-
+                stripedidentifier = identifier.strip()
+                if stripedidentifier and not stripedidentifier.startswith('#'):
+                    result = sh.download(stripedidentifier, args.output)
+                    if 'err' in result:
+                        logger.debug('%s', result['err'])
+                    else:
+                        logger.debug('Successfully downloaded file with identifier %s', identifier)
+        logger.debug('finished')                        
+    else:
+        logger.debug('No parameter given')
+                            
 
 if __name__ == '__main__':
     main()
